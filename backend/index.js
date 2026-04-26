@@ -5,23 +5,32 @@ import express from "express";
 import crypto from "crypto";
 import { Pool } from "pg";
 import "dotenv/config"
+import bcrypt from "bcrypt"
 
 const app = express();
 const puerto = process.env.PORT;
 
 app.use(express.json());
 
+//We use the .env file which is covered by .gitignore so no one knows our database credentials.
 const pool = new Pool({
     connectionString:
         process.env.DATABASE_URL
 });
 
-function hashPassword(password) {
-    const salt = crypto.randomBytes(16).toString("hex");
-    const derivedKey = crypto
-        .pbkdf2Sync(password, salt, 310000, 32, "sha256")
-        .toString("hex");
-    return `${salt}:${derivedKey}`;
+
+//Hash function to apply hashing techniques to login password. I tryed to change the
+//methods used to hash the password.
+
+async function hashPassword(password) {
+    try{
+        const salt = await bcrypt.genSalt(10);
+        const derivedKey = await bcrypt.hash(password, salt);
+        return `${salt}:${derivedKey}`;
+    }
+    catch(error){
+        console.log("An error ocurred.");
+    }
 }
 
 function verifyPassword(password, storedHash) {

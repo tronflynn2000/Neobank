@@ -23,6 +23,7 @@ const pool = new Pool({
 //methods used to hash the password.
 
 async function hashPassword(password) {
+
     try{
         const salt = await bcrypt.genSalt(10);
         const derivedKey = await bcrypt.hash(password, salt);
@@ -34,6 +35,7 @@ async function hashPassword(password) {
 }
 
 function verifyPassword(password, storedHash) {
+
     const [salt, key] = storedHash.split(":");
     const derivedKey = crypto
         .pbkdf2Sync(password, salt, 310000, 32, "sha256")
@@ -50,8 +52,8 @@ app.get("/", (req, res) => {
 });
 
 app.post("/register", async (req, res) => {
-    const { name, surname, email, password, phone_number } = req.body;
 
+    const { name, surname, email, password, phone_number } = req.body;
     if (!name || !surname || !email || !password) {
         return res.status(400).json({
             error: "name, surname, email and password are required",
@@ -63,14 +65,14 @@ app.post("/register", async (req, res) => {
             "SELECT id FROM public.client WHERE email = $1",
             [email]
         );
-
+        
         if (existing.rows.length > 0) {
             return res.status(409).json({
                 error: "A user with that email already exists",
             });
         }
 
-        const password_hash = hashPassword(password);
+        const password_hash = await hashPassword(password);
         const result = await pool.query(
             `INSERT INTO public.client
                 (name, surname, email, password_hash, phone_number)

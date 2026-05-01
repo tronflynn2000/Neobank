@@ -27,20 +27,25 @@ async function hashPassword(password) {
     try{
         const salt = await bcrypt.genSalt(10);
         const derivedKey = await bcrypt.hash(password, salt);
-        return `${salt}:${derivedKey}`;
+        //return `${salt}:${derivedKey}`;
+        return derivedKey;
     }
     catch(error){
         console.log("An error ocurred.");
     }
 }
 
-function verifyPassword(password, storedHash) {
-
-    const [salt, key] = storedHash.split(":");
-    const derivedKey = crypto
-        .pbkdf2Sync(password, salt, 310000, 32, "sha256")
-        .toString("hex");
-    return crypto.timingSafeEqual(Buffer.from(key, "hex"), Buffer.from(derivedKey, "hex"));
+//We must take a look at how we save the hashed data.
+async function verifyPassword(password, storedHash) {
+    
+    //const [salt, key] = storedHash.toString().split(":");
+    const hash = await bcrypt.compare(password, storedHash);
+    console.log(hash);
+    //const derivedKey = crypto
+      //  .pbkdf2Sync(password, salt, 310000, 32, "sha256")
+        //.toString("hex");
+    //return crypto.timingSafeEqual(Buffer.from(key, "hex"), Buffer.from(derivedKey, "hex"));
+    return hash;
 }
 
 app.get("/about", (req, res) => {
@@ -92,6 +97,31 @@ app.post("/register", async (req, res) => {
         });
     }
 });
+
+
+
+app.post("/login", async (req, res) => {
+        //Here we will check wether we take the value or not.
+        const { email, password } = req.body;
+        const hashedPassword = await pool.query(
+            'SELECT password_hash FROM public.client WHERE email=$1',
+            [email]
+        );
+        console.log(hashedPassword.rows[0].password_hash);
+
+        //Here the code crashes by now, inside the function to verifyPassword.
+        if(await verifyPassword(password,hashedPassword.rows[0].password_hash)){
+            console.log("You signed in");
+        }
+
+        else{
+            console.log("The user does not exist.");
+        }
+        //Once we logged in, we can continue with the session used by the user.
+        
+});
+
+
 
 app.listen(puerto, () => {
     console.log("Server running on port", puerto);

@@ -5,11 +5,22 @@ import express from "express";
 import crypto from "crypto";
 import { Pool } from "pg";
 import "dotenv/config"
+import session from "express-session";
+import passport from "passport";
 
 const app = express();
 const puerto = process.env.PORT;
 
 app.use(express.json());
+app.use(session({
+    secret: "TOPSECRETWORD",
+    resave: false,
+    saveUninitialized: true,
+
+})
+);
+app.use(passport.initialize());
+app.use(passport.session());
 
 const pool = new Pool({
     connectionString:
@@ -38,6 +49,37 @@ app.get("/about", (req, res) => {
 
 app.get("/", (req, res) => {
     res.send("<h1> Hello World</h1>");
+});
+
+//Here I'll define the login function in our API.
+app.post("/login", async(req,res) =>{
+    //Here we need to define the events that take place in order to login.
+    const { username, password } = req.body;
+    //Here we would need to check if the username meets the requirements.
+    if (!username || !password){
+        return res.status(401).json({
+            error:  "name and password required",
+        });
+    }
+
+    pwd_hash = await pool.query(
+        "SELECT password_hash FROM public.client WHERE email = $1",
+            [email]
+    );
+
+    if (pwd_hash.rows.length <= 0) {
+            return res.status(409).json({
+                error: "A user with that email does not exist",
+            });
+        }
+    else if(verifyPassword(pwd_hash.rows[0], password)){
+        return res.status(200).json;
+    }
+
+});
+
+app.get("/secrets", (req,res) => {
+    res.send("You are logged in!");
 });
 
 app.post("/register", async (req, res) => {
